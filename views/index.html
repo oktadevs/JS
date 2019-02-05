@@ -1,0 +1,170 @@
+<!doctype html>
+<html>
+<head>
+    <title>Java Script</title>
+
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="https://oktaidm.okta.com/assets/js/sdk/okta-auth-sdk-1.0.0.min.js" type="text/javascript"></script>
+
+    <style type="text/css">
+   
+    .formating {
+        color: white;
+        font-family:verdana;
+        background-color: #1A7AD3;
+        border: 1px solid #000000;
+        float: left;
+        word-wrap: break-word;
+        width: 30em;
+    }
+
+    .instructions {
+        font-size: 70%;
+        font-family:verdana;
+        color: black;
+
+    }
+
+    .sub{
+    	font-size: 80%;
+    }
+
+    .hidden{
+    	visibility: hidden;
+    }
+
+    a:link {color: orange;}
+    a:visited {color: green;}
+    a:hover {color: red;}
+    a:active {color: yellow;}
+
+    </style>
+
+</head>
+<body>
+	<div class="formating">
+		<p>Enter Org url</p>
+		<input id="org" type="text" name="org"/>
+		<br/>
+	    
+	    <p>Enter Credentials to authenticate</p>
+	    <p class="instructions" style="font-weight: bold;">(MFA Flow not Enabled & ENABLE CORS!!)</p>
+	    <p>User Name</p>
+	    <input id="uname" type="text" name="uname"/>
+	    <p>Password</p>
+	    <input id="passwd" type="password" name="passwd"/>
+	    <button id = "Login" onclick:"authenticateOKTA()">Login</button>
+		<br/>
+		<p class="sub">Status of transaction is: </p>
+		<p id="status"> </p>
+		<p class="sub">Session Token is : </p>
+		<p class="instructions" id="tokenId"> </p>
+		<p class="sub">Create cookie by going to </p>
+		<p class="instructions" id="sessioncookieURL"> </p>
+		<br>
+		<p id="link"></p>
+		<a class ="instructions "href="https://developer.okta.com">OKTA Dev Site</a>
+    </div>
+
+    <div id="OIDC" style="float: right;" class="formating hidden">
+	    
+	    <p>Enter OIDC info from OKTA General Tab</p>
+	    <p class="instructions">(you must first authenticate and get Session Token, session tokens can only be used once. Also you would need to have created an OIDC app in okta and. Use "http://portal.oktaidm.com/widget" for redirect and login UIR's)</p>
+	    <p>Client ID</p>
+	    <input id="issuer" type="text" name="issuer"/>
+	    <p>Redirect URI</p>
+	    <input id="uri" type="text" name="uri"/>
+	    <p>nonce</p>
+	    <p class="instructions">(could be anything you want, its set by the app)</p>
+	    <input id="nonce" type="text" name="nonce"/>
+	    <p>State</p>
+	    <p class="instructions">(the State your application is expecting, set to anything)</p>
+	    <input id="state" type="text" name="state"/>
+	    <p>Copy Session Token</p>
+	    <p class="instructions">(if you already used the link on the left to authentication you must obtain new session token)</p>
+	    <input id="authtoken" type="text" name="authtoken"/>
+		<p class="sub" >Request ID token</p>
+		<button id = "get_id_token" onclick:"OIDC()">Get ID Token</button>
+		<p class="sub">URL is: </p>
+		<p class="instructions" id="url"> </p>
+		<p class="instructions">(Look for ID token in SSO tracer 302 redirect)</p>
+		<p id="IDtoken"> </p>
+		
+	
+    </div>
+
+
+    <script type="text/javascript">
+
+ //****************************************************************************************************************************//
+
+		document.getElementById("Login").onclick=function authenticateOKTA(){
+		authClient = new OktaAuth({url: document.getElementById("org").value});
+		authClient.signIn({
+		  username: document.getElementById("uname").value,
+		  password: document.getElementById("passwd").value
+		})
+
+		.then(function(transaction) {
+				
+				if(transaction.status=="SUCCESS"){
+					document.getElementById("status").innerHTML=transaction.status;
+		      		document.getElementById("tokenId").innerHTML=transaction.sessionToken;
+		      		document.getElementById("sessioncookieURL").innerHTML=document.getElementById("org").value+"/login/sessionCookieRedirect?token="+transaction.sessionToken+"&redirectUrl="+document.getElementById("org").value;
+		      		
+		      		document.getElementById("link").innerHTML="<a href="+'"'+document.getElementById("org").value+"/login/sessionCookieRedirect?token="+transaction.sessionToken+"&redirectUrl="+document.getElementById("org").value+'"'+">Go to OKTA Org</a>";
+		      		document.getElementById("OIDC").style.visibility="visible";
+		      		//sessionToken=transaction.sessionToken;
+				}
+		})
+		.fail(function(err) { // On failure
+	  		console.error(err);
+		});
+	}
+//****************************************************************************************************************************//
+
+document.getElementById("get_id_token").onclick=function OIDC(){
+
+var client_ID=document.getElementById("issuer").value;
+var redirect_uri=document.getElementById("uri").value;
+var authtoken=document.getElementById("authtoken").value;
+var org=document.getElementById("org").value;
+var state=document.getElementById("state").value;
+var nonce=document.getElementById("nonce").value;
+
+
+var url=org+"/oauth2/v1/authorize?client_id="+client_ID+"&response_type=id_token&scope=openid&prompt=none&redirect_uri="+redirect_uri+"&state="+state+"&nonce="+nonce+"&sessionToken="+authtoken;
+		document.getElementById("url").innerHTML=url;
+
+		
+
+		aClient = new HttpClient();
+		aClient.get(url, function(response) {
+
+		});
+		
+		
+}
+
+
+var HttpClient = function() {
+    this.get = function(aUrl, aCallback) {
+        var anHttpRequest = new XMLHttpRequest();
+        anHttpRequest.responseType = "blob";
+        anHttpRequest.onreadystatechange = function() { 
+            if (anHttpRequest.readyState == 4 && anHttpRequest.status == 200)
+                aCallback(anHttpRequest.responseText);
+        }
+        anHttpRequest.open( "GET", aUrl, true );            
+        anHttpRequest.send( null );
+        var test = anHttpRequest.getAllResponseHeaders();
+    }
+}
+
+	</script>
+
+</body>
+
+</html>
